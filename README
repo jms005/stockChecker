@@ -1,0 +1,7 @@
+stockChecker is a simple app to fetch the price of specified stocks and
+sends them in an SMS message.  It is intended to be run via cron after
+the stock markets close to get succinct daily update.  This effort is a
+way to learn Python better and use API integrations.
+
+Stock prices are checked using AlphaVantage.com, and SMS messages sent
+using Twilio.
