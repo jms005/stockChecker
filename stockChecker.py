@@ -9,7 +9,7 @@
 import logging, os, datetime
 import requests,json
 from twilio.rest import Client
-logging.basicConfig(level=logging.DEBUG, format=' %(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.CRITICAL, format=' %(asctime)s - %(levelname)s - %(message)s')
 
 def loadConfig(config_file='~/stocklist.json'):
     config_file = os.path.expanduser(config_file)
@@ -78,6 +78,7 @@ def send_notification(user_address, tickers):
         for ticker in tickers:
             if not header:
                 msg_body += 'Update: ' + tickers[ticker]['metadata']['3. Last Refreshed'] + '\n'
+                header=True
             logging.debug('Update message for %s' % ticker)
             close_price = float(tickers[ticker]['last']['4. close'])
             close_change = 'nil'
