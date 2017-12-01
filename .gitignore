@@ -100,4 +100,8 @@ ENV/
 # mypy
 .mypy_cache/
 
+# Local project config files
 *.json
+
+# PyCharm metadata
+.idea/
