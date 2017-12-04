@@ -12,7 +12,7 @@ from twilio.rest import Client
 
 DEBUG=False
 logging.basicConfig(level=logging.DEBUG, format=' %(asctime)s - %(levelname)s - %(message)s')
-reg_datetime = re.compile('\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}\d{2}')
+reg_datetime = re.compile('\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}')
 
 
 def load_config(config_file='~/stocklist.json'):
@@ -79,6 +79,7 @@ def get_stock_updates(tickers = 'CSCO'):
                 res.raise_for_status()
             except Exception as exc:
                 logging.error("Failed to retrieve stock updates: %s" % exc)
+                return None
             json_result = json.loads(res.text)
         else:
             # Test data (end-of-day)
@@ -337,7 +338,8 @@ def main():
 
     if user_config:
         stock_update = get_stock_updates(user_config['tickers'])
-        send_notification(user_config['user'], stock_update)
+        if stock_update:
+            send_notification(user_config['user'], stock_update)
     else:
         pass
 
