@@ -14,7 +14,7 @@ DEBUG=False
 logging.basicConfig(level=logging.DEBUG, format=' %(asctime)s - %(levelname)s - %(message)s')
 reg_datetime = re.compile('\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}')
 global_config = os.getcwd() + '/config.json'
-debug_datafile = os.getcwd() + '/debugdata.json'
+debug_datafile = os.getcwd() + '/debugdata.dat'
 
 def load_user_config(user_config_file='~/stocklist.json'):
     user_config_file = os.path.expanduser(user_config_file)
