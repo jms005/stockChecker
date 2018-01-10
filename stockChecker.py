@@ -11,7 +11,7 @@ from datetime import datetime
 from twilio.rest import Client
 
 DEBUG=False
-logging.basicConfig(level=logging.DEBUG, format=' %(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.WARN, format=' %(asctime)s - %(levelname)s - %(message)s')
 reg_datetime = re.compile('\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}')
 global_config = os.getcwd() + '/config.json'
 debug_datafile = os.getcwd() + '/debugdata.dat'
@@ -97,7 +97,7 @@ def send_notification(user_address, tickers):
         msg_body = ''
         header = None
 
-        for ticker in tickers:
+        for ticker in sorted(tickers.keys()):
             if not header:
                 msg_body += 'Update: ' + tickers[ticker]['metadata']['3. Last Refreshed'] + '\n'
                 header=True
@@ -105,7 +105,7 @@ def send_notification(user_address, tickers):
             close_price = tickers[ticker]['last']['price']
             close_change = tickers[ticker]['last']['change']
             change_pct = tickers[ticker]['last']['change_pct']
-            msg_body += ('{} ${:.2f}, {:+.2f} ({:.2f}%)\n'.format(ticker,close_price,close_change,change_pct))
+            msg_body += ('{}  ${:.2f},  {:+.2f} ({:+.2f}%)\n'.format(ticker,close_price,close_change,change_pct))
 
         logging.debug('New message: %s' % msg_body)
 
