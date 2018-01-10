@@ -10,11 +10,12 @@ import logging, os, sys, requests, json, re
 from datetime import datetime
 from twilio.rest import Client
 
-DEBUG=False
+DEBUG = False
 logging.basicConfig(level=logging.WARN, format=' %(asctime)s - %(levelname)s - %(message)s')
 reg_datetime = re.compile('\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}')
 global_config = os.getcwd() + '/config.json'
 debug_datafile = os.getcwd() + '/debugdata.dat'
+
 
 def load_user_config(user_config_file='~/stocklist.json'):
     user_config_file = os.path.expanduser(user_config_file)
@@ -32,8 +33,8 @@ def get_app_config(key):
     try:
         with open(global_config) as fs:
             return json.load(fs)[key]
-    except:
-        logging.critical('Failed to open {}'.format(global_config))
+    except Exception as exc:
+        logging.critical('Failed to open {}: {}'.format(global_config, exc))
 
 
 def get_stock_price(series, date):
@@ -52,7 +53,7 @@ def get_stock_price(series, date):
     return price_update
 
 
-def get_stock_updates(tickers = 'CSCO'):
+def get_stock_updates(tickers='CSCO'):
     av_config = get_app_config('alphavantage')
     results = {}
 
@@ -61,11 +62,13 @@ def get_stock_updates(tickers = 'CSCO'):
         ticker_update = {}
 
         if not DEBUG:
-            api_params = {"function": "TIME_SERIES_DAILY",
-                      "symbol": ticker,
-                      "datatype": "json",
-                      "outputsize": "compact",
-                      "apikey": av_config['key']}
+            api_params = {
+                            "function": "TIME_SERIES_DAILY",
+                            "symbol": ticker,
+                            "datatype": "json",
+                            "outputsize": "compact",
+                            "apikey": av_config['key']
+                        }
             res = requests.get(av_config['api_url'], params=api_params)
             try:
                 res.raise_for_status()
@@ -100,12 +103,12 @@ def send_notification(user_address, tickers):
         for ticker in sorted(tickers.keys()):
             if not header:
                 msg_body += 'Update: ' + tickers[ticker]['metadata']['3. Last Refreshed'] + '\n'
-                header=True
+                header = True
 
             close_price = tickers[ticker]['last']['price']
             close_change = tickers[ticker]['last']['change']
             change_pct = tickers[ticker]['last']['change_pct']
-            msg_body += ('{}  ${:.2f},  {:+.2f} ({:+.2f}%)\n'.format(ticker,close_price,close_change,change_pct))
+            msg_body += ('{}  ${:.2f},  {:+.2f} ({:+.2f}%)\n'.format(ticker, close_price, close_change, change_pct))
 
         logging.debug('New message: %s' % msg_body)
 
@@ -118,8 +121,8 @@ def send_notification(user_address, tickers):
                 try:
                     msg = t_client.messages.create(to=user_address, from_=twilio_config['phoneNo'], body=msg_body)
                     logging.debug('Message SID: {}'.format(msg.sid))
-                except:
-                    logging.error('Message send failed.')
+                except Exception as exc:
+                    logging.error('Message send failed: {}'.format(exc))
             else:
                 logging.debug('Twilio Client: {}'.format(t_client))
         else:
@@ -142,7 +145,7 @@ def main():
 
 
 # Check for CLI parameter 'DEBUG'
-if len(sys.argv) > 1 :
+if len(sys.argv) > 1:
     DEBUG = True
 
 if __name__ == "__main__":
