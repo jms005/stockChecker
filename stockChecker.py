@@ -5,13 +5,16 @@
 # User info and stock ticker symbols stored in local ~/stocklist.json file
 # Requires API key for Alpha Vantage (https://www.alphavantage.co/support/)
 # which is read from a local alphavantage.json file.
+#
+# Run with any CLI parameter to enable debug mode which uses reads from debugdata.dat (JSON) in the program directory
+# instead of querying the stock data service, and prints the notification message to stdout instead of sending SMS.
 
 import logging, os, sys, requests, json, re
 from datetime import datetime
 from twilio.rest import Client
 
 DEBUG = False
-logging.basicConfig(level=logging.WARN, format=' %(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format=' %(asctime)s - %(levelname)s - %(message)s')
 reg_datetime = re.compile('\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}')
 global_config = os.getcwd() + '/config.json'
 debug_datafile = os.getcwd() + '/debugdata.dat'
@@ -58,28 +61,37 @@ def get_stock_updates(tickers='CSCO'):
     results = {}
 
     logging.debug('Tickers to process: %s' % tickers)
-    for ticker in tickers:
-        ticker_update = {}
 
-        if not DEBUG:
-            api_params = {
-                            "function": "TIME_SERIES_DAILY",
-                            "symbol": ticker,
-                            "datatype": "json",
-                            "outputsize": "compact",
-                            "apikey": av_config['key']
-                        }
-            res = requests.get(av_config['api_url'], params=api_params)
-            try:
-                res.raise_for_status()
-            except Exception as exc:
-                logging.error("Failed to retrieve stock updates: %s" % exc)
-                return None
-            json_result = json.loads(res.text)
-        else:
-            # Test data (end-of-day)
-            with open(debug_datafile) as fs:
-                json_result = json.load(fs)
+    for ticker in tickers:
+        json_result = None
+        attempt = 0
+        while attempt < 3:
+            ticker_update = {}
+            if not DEBUG:
+                api_params = {
+                                "function": "TIME_SERIES_DAILY",
+                                "symbol": ticker,
+                                "datatype": "json",
+                                "outputsize": "compact",
+                                "apikey": av_config['key']
+                            }
+                res = requests.get(av_config['api_url'], params=api_params)
+                try:
+                    res.raise_for_status()
+                except Exception as exc:
+                    logging.error("Failed to retrieve stock updates:\n{}".format(exc))
+                    return None
+                json_result = json.loads(res.text)
+            else:
+                # Test data (end-of-day)
+                logging.debug('Loading debug data:')
+                with open(debug_datafile) as fs:
+                    json_result = json.load(fs)
+            if json_result:
+                logging.debug('Successfully retrieved data.')
+                break
+            logging.debug('Request: {} failed, try {}'.format(av_config['api_url'], attempt+1))
+            attempt += 1
 
         ticker_update['metadata'] = json_result['Meta Data']
         last_refreshed = ticker_update['metadata']['3. Last Refreshed']
@@ -124,7 +136,7 @@ def send_notification(user_address, tickers):
                 except Exception as exc:
                     logging.error('Message send failed: {}'.format(exc))
             else:
-                logging.debug('Twilio Client: {}'.format(t_client))
+                logging.debug('Twilio Client generated: {}\tTest run, no notification generated.'.format(t_client))
         else:
             logging.error("Missing Twilio config in {}".format(global_config))
             return False
