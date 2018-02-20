@@ -14,10 +14,10 @@ from datetime import datetime
 from twilio.rest import Client
 
 DEBUG = False
-logging.basicConfig(level=logging.INFO, format=' %(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.WARN, format=' %(asctime)s - %(levelname)s - %(message)s')
 reg_datetime = re.compile('\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}')
-global_config = os.getcwd() + '/config.json'
-debug_datafile = os.getcwd() + '/debugdata.dat'
+global_config = os.getcwd() + '/' + 'config.json'
+debug_datafile = os.getcwd() + '/' + 'debugdata.dat'
 
 
 def load_user_config(user_config_file='~/stocklist.json'):
@@ -84,7 +84,7 @@ def get_stock_updates(tickers='CSCO'):
                 json_result = json.loads(res.text)
             else:
                 # Test data (end-of-day)
-                logging.debug('Loading debug data:')
+                logging.debug('Loading debug data: {}'.format(debug_datafile))
                 with open(debug_datafile) as fs:
                     json_result = json.load(fs)
             if json_result:
@@ -100,6 +100,10 @@ def get_stock_updates(tickers='CSCO'):
         else:
             update_dt = datetime.strptime(last_refreshed, '%Y-%m-%d')
         update_date = update_dt.strftime('%Y-%m-%d')
+
+        if update_date != datetime.strftime(datetime.today(), '%Y-%m-%d'):
+            logging.debug('Retrieved data is not from today: {}'.format(update_date))
+            return None
 
         ticker_update['last'] = get_stock_price(json_result['Time Series (Daily)'], update_date)
         results[ticker] = ticker_update
