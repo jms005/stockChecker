@@ -105,3 +105,4 @@ ENV/
 
 # PyCharm metadata
 .idea/
+debugdata.dat
