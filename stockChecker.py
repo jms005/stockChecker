@@ -9,13 +9,18 @@
 # Run with any CLI parameter to enable debug mode which uses reads from debugdata.dat (JSON) in the program directory
 # instead of querying the stock data service, and prints the notification message to stdout instead of sending SMS.
 
-import logging, os, sys, requests, json, re
+import json
+import logging
+import os
+import re
+import requests
+import sys
 from datetime import datetime
 from twilio.rest import Client
 
 DEBUG = False
 logging.basicConfig(level=logging.WARN, format=' %(asctime)s - %(levelname)s - %(message)s')
-reg_datetime = re.compile('\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}')
+reg_datetime = re.compile('\\d{4}-\\d{2}-\\d{2}\\s\\d{2}:\\d{2}:\\d{2}')
 global_config = os.getcwd() + '/' + 'config.json'
 debug_datafile = os.getcwd() + '/' + 'debugdata.dat'
 
@@ -59,6 +64,7 @@ def get_stock_price(series, date):
 def get_stock_updates(tickers='CSCO'):
     av_config = get_app_config('alphavantage')
     results = {}
+    ticker_update = {}
 
     logging.debug('Tickers to process: %s' % tickers)
 
@@ -66,15 +72,15 @@ def get_stock_updates(tickers='CSCO'):
         json_result = None
         attempt = 0
         while attempt < 3:
-            ticker_update = {}
+            # ticker_update = {}
             if not DEBUG:
                 api_params = {
-                                "function": "TIME_SERIES_DAILY",
-                                "symbol": ticker,
-                                "datatype": "json",
-                                "outputsize": "compact",
-                                "apikey": av_config['key']
-                            }
+                    "function": "TIME_SERIES_DAILY",
+                    "symbol": ticker,
+                    "datatype": "json",
+                    "outputsize": "compact",
+                    "apikey": av_config['key']
+                }
                 res = requests.get(av_config['api_url'], params=api_params)
                 try:
                     res.raise_for_status()
@@ -90,7 +96,7 @@ def get_stock_updates(tickers='CSCO'):
             if json_result:
                 logging.debug('Successfully retrieved data.')
                 break
-            logging.debug('Request: {} failed, try {}'.format(av_config['api_url'], attempt+1))
+            logging.debug('Request: {} failed, try {}'.format(av_config['api_url'], attempt + 1))
             attempt += 1
 
         ticker_update['metadata'] = json_result['Meta Data']
@@ -113,37 +119,37 @@ def get_stock_updates(tickers='CSCO'):
 
 
 def send_notification(user_address, tickers):
-        msg_body = ''
-        header = None
+    msg_body = ''
+    header = None
 
-        for ticker in sorted(tickers.keys()):
-            if not header:
-                msg_body += 'Update: ' + tickers[ticker]['metadata']['3. Last Refreshed'] + '\n'
-                header = True
+    for ticker in sorted(tickers.keys()):
+        if not header:
+            msg_body += 'Update: ' + tickers[ticker]['metadata']['3. Last Refreshed'] + '\n'
+            header = True
 
-            close_price = tickers[ticker]['last']['price']
-            close_change = tickers[ticker]['last']['change']
-            change_pct = tickers[ticker]['last']['change_pct']
-            msg_body += ('{}  ${:.2f},  {:+.2f} ({:+.2f}%)\n'.format(ticker, close_price, close_change, change_pct))
+        close_price = tickers[ticker]['last']['price']
+        close_change = tickers[ticker]['last']['change']
+        change_pct = tickers[ticker]['last']['change_pct']
+        msg_body += ('{}  ${:.2f},  {:+.2f} ({:+.2f}%)\n'.format(ticker, close_price, close_change, change_pct))
 
-        logging.debug('New message: %s' % msg_body)
+    logging.debug('New message: %s' % msg_body)
 
-        twilio_config = get_app_config('twilio')
-        logging.debug('Twilio config: {}'.format(twilio_config))
+    twilio_config = get_app_config('twilio')
+    logging.debug('Twilio config: {}'.format(twilio_config))
 
-        if twilio_config and all([twilio_config['phoneNo'], twilio_config['auth'], twilio_config['sid']]):
-            t_client = Client(twilio_config['sid'], twilio_config['auth'])
-            if not DEBUG:
-                try:
-                    msg = t_client.messages.create(to=user_address, from_=twilio_config['phoneNo'], body=msg_body)
-                    logging.debug('Message SID: {}'.format(msg.sid))
-                except Exception as exc:
-                    logging.error('Message send failed: {}'.format(exc))
-            else:
-                logging.debug('Twilio Client generated: {}\tTest run, no notification generated.'.format(t_client))
+    if twilio_config and all([twilio_config['phoneNo'], twilio_config['auth'], twilio_config['sid']]):
+        t_client = Client(twilio_config['sid'], twilio_config['auth'])
+        if not DEBUG:
+            try:
+                msg = t_client.messages.create(to=user_address, from_=twilio_config['phoneNo'], body=msg_body)
+                logging.debug('Message SID: {}'.format(msg.sid))
+            except Exception as exc:
+                logging.error('Message send failed: {}'.format(exc))
         else:
-            logging.error("Missing Twilio config in {}".format(global_config))
-            return False
+            logging.debug('Twilio Client generated: {}\tTest run, no notification generated.'.format(t_client))
+    else:
+        logging.error("Missing Twilio config in {}".format(global_config))
+        return False
 
 
 def main():
