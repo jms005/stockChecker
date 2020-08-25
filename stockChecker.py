@@ -54,6 +54,7 @@ def get_stock_price(series, date):
     previous_update = series_dates[series_dates.index(date) - 1]
     # logging.debug('Previous date: {} @ {}'.format(previous_update, series[previous_update]['4. close']))
 
+    price_update['3. Last Refreshed'] = series_dates[series_dates.index(date)]
     price_update['price'] = float(series[date]['4. close'])
     price_update['change'] = (price_update['price'] - float(series[previous_update]['4. close']))
     price_update['change_pct'] = (price_update['change'] / price_update['price']) * 100
@@ -113,7 +114,7 @@ def get_stock_updates(tickers='SPY'):
             return None
 
         ticker_update['last'] = get_stock_price(json_result['Time Series (Daily)'], update_date)
-        results[ticker] = ticker_update
+        results[ticker] = ticker_update['last']
         # logging.debug('Update: %s = %s' % (ticker, results[ticker]))
 
     return results
@@ -125,12 +126,12 @@ def send_notification(user_address, tickers):
 
     for ticker in sorted(tickers.keys()):
         if not header:
-            msg_body += 'Update: ' + tickers[ticker]['metadata']['3. Last Refreshed'] + '\n'
+            msg_body += 'Update: ' + tickers[ticker]['3. Last Refreshed'] + '\n'
             header = True
 
-        close_price = tickers[ticker]['last']['price']
-        close_change = tickers[ticker]['last']['change']
-        change_pct = tickers[ticker]['last']['change_pct']
+        close_price = tickers[ticker]['price']
+        close_change = tickers[ticker]['change']
+        change_pct = tickers[ticker]['change_pct']
         msg_body += ('{}  ${:.2f},  {:+.2f} ({:+.2f}%)\n'.format(ticker, close_price, close_change, change_pct))
 
     # logging.debug('New message: %s' % msg_body)
