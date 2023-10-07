@@ -106,3 +106,4 @@ ENV/
 # PyCharm metadata
 .idea/
 debugdata.dat
+.run/stockChecker.run.xml
